@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alignment Tracker</title>
+
+<style>
+:root {
+  --bg-top: #FAFAFA;
+  --bg-bottom: #F2F2F2;
+  --text-primary: #111111;
+  --text-secondary: #6B7280;
+  --accent: #2563EB;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-top);
+}
+
+.half {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+.top {
+  background: var(--bg-top);
+}
+
+.bottom {
+  background: var(--bg-bottom);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.number-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.number {
+  font-size: 110px;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: transform 120ms ease;
+}
+
+.progress-ring {
+  position: absolute;
+  transform: rotate(-90deg);
+}
+
+circle {
+  fill: transparent;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 440;
+  stroke-dashoffset: 440;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 16px;
+  color: var(--text-secondary);
+  background: white;
+  border-top: 1px solid #E5E7EB;
+}
+</style>
+</head>
+
+<body>
+
+<div class="half top" id="toward">
+  <div class="title">Toward My Ideal Self</div>
+  <div class="number-container">
+    <svg class="progress-ring" width="160" height="160">
+      <circle cx="80" cy="80" r="70"></circle>
+    </svg>
+    <div class="number" id="towardCount">0</div>
+  </div>
+</div>
+
+<div class="half bottom" id="away">
+  <div class="title">Away From My Ideal Self</div>
+  <div class="number-container">
+    <svg class="progress-ring" width="160" height="160">
+      <circle cx="80" cy="80" r="70"></circle>
+    </svg>
+    <div class="number" id="awayCount">0</div>
+  </div>
+</div>
+
+<div class="footer" id="percentageText">
+  Today has just begun.
+</div>
+
+<script>
+const HOLD_DURATION = 2000;
+const STORAGE_KEY = "alignmentData";
+
+let data = {
+  date: "",
+  toward: 0,
+  away: 0
+};
+
+function getToday() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function loadData() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  const today = getToday();
+
+  if (saved && saved.date === today) {
+    data = saved;
+  } else {
+    data = { date: today, toward: 0, away: 0 };
+    saveData();
+  }
+
+  updateUI();
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function updateUI() {
+  document.getElementById("towardCount").textContent = data.toward;
+  document.getElementById("awayCount").textContent = data.away;
+
+  const total = data.toward + data.away;
+
+  const footer = document.getElementById("percentageText");
+
+  if (total === 0) {
+    footer.textContent = "Today has just begun.";
+  } else {
+    const percent = Math.round((data.toward / total) * 100);
+    footer.textContent = `Today I was ${percent}% aligned.`;
+  }
+}
+
+function addHoldInteraction(element, type) {
+  const circle = element.querySelector("circle");
+  let startTime = null;
+  let holding = false;
+  let animationFrame;
+
+  function animate(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / HOLD_DURATION, 1);
+    const offset = 440 - (440 * progress);
+    circle.style.strokeDashoffset = offset;
+
+    if (progress < 1 && holding) {
+      animationFrame = requestAnimationFrame(animate);
+    } else if (progress >= 1) {
+      complete();
+    }
+  }
+
+  function start() {
+    holding = true;
+    startTime = null;
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  function cancel() {
+    holding = false;
+    cancelAnimationFrame(animationFrame);
+    circle.style.strokeDashoffset = 440;
+  }
+
+  function complete() {
+    circle.style.strokeDashoffset = 440;
+    if (type === "toward") data.toward++;
+    else data.away++;
+    saveData();
+    updateUI();
+
+    const number = element.querySelector(".number");
+    number.style.transform = "scale(1.05)";
+    setTimeout(() => number.style.transform = "scale(1)", 120);
+  }
+
+  element.addEventListener("mousedown", start);
+  element.addEventListener("mouseup", cancel);
+  element.addEventListener("mouseleave", cancel);
+
+  element.addEventListener("touchstart", start);
+  element.addEventListener("touchend", cancel);
+}
+
+addHoldInteraction(document.getElementById("toward"), "toward");
+addHoldInteraction(document.getElementById("away"), "away");
+
+loadData();
+</script>
+
+</body>
+</html>
