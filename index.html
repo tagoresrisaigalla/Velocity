@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alignment Tracker</title>
+<title>Velocity</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FAFAFA">
 
 <style>
 :root {
@@ -22,7 +24,7 @@
 }
 
 body {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--bg-top);
@@ -94,6 +96,12 @@ circle {
 }
 </style>
 </head>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
 
 <body>
 
